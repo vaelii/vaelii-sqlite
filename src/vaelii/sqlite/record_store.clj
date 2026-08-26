@@ -251,12 +251,18 @@
               (.remove j-cache (ckey id))))
     nil)
 
+  ;; Guarded like the fetches — here and on `delete-provenance!`, `mark-premise` and
+  ;; `unmark-premise!`: `id-ok?`'s contract is that a handle this store could never
+  ;; have issued is answered quietly, not thrown.  The memory store makes these four
+  ;; ops no-ops for one, and unguarded `(ckey id)` on an informant keyword is a
+  ;; ClassCastException out of a door that must stay quiet.
   (put-provenance [_ id prov]
-    (locked lock
-            (jdbc/execute-one!
-             conn ["INSERT INTO record_provenance (id, prov) VALUES (?, ?)
+    (when (id-ok? id)
+      (locked lock
+              (jdbc/execute-one!
+               conn ["INSERT INTO record_provenance (id, prov) VALUES (?, ?)
               ON CONFLICT(id) DO UPDATE SET prov=excluded.prov"
-                   id (nippy/freeze prov)]))
+                     id (nippy/freeze prov)])))
     prov)
 
   (get-provenance [_ id]
@@ -268,8 +274,9 @@
                       :prov nippy/thaw))))
 
   (delete-provenance! [_ id]
-    (locked lock
-            (jdbc/execute-one! conn ["DELETE FROM record_provenance WHERE id=?" id]))
+    (when (id-ok? id)
+      (locked lock
+              (jdbc/execute-one! conn ["DELETE FROM record_provenance WHERE id=?" id])))
     nil)
 
   (sentex-ids [_] (locked lock (id-roster conn kind-sentex nil)))
@@ -280,19 +287,21 @@
     ;; guard on the sentex existing (no phantom premise): the UPDATE's WHERE is the
     ;; guard — it touches nothing when the row is absent.  Column-only, so no frame
     ;; rewrite; evict the cached record so the next fetch reflects the new strength.
-    (locked lock
-            (jdbc/execute-one!
-             conn ["UPDATE record SET premise=1, strength=? WHERE id=? AND kind=?"
-                   (strength->str (or strength :default)) id kind-sentex])
-            (.remove sx-cache (ckey id)))
+    (when (id-ok? id)
+      (locked lock
+              (jdbc/execute-one!
+               conn ["UPDATE record SET premise=1, strength=? WHERE id=? AND kind=?"
+                     (strength->str (or strength :default)) id kind-sentex])
+              (.remove sx-cache (ckey id))))
     nil)
 
   (unmark-premise! [_ id]
-    (locked lock
-            (jdbc/execute-one!
-             conn ["UPDATE record SET premise=0, strength=NULL WHERE id=? AND kind=?"
-                   id kind-sentex])
-            (.remove sx-cache (ckey id)))
+    (when (id-ok? id)
+      (locked lock
+              (jdbc/execute-one!
+               conn ["UPDATE record SET premise=0, strength=NULL WHERE id=? AND kind=?"
+                     id kind-sentex])
+              (.remove sx-cache (ckey id))))
     nil)
 
   (premise-ids [_] (locked lock (id-roster conn kind-sentex " AND premise=1")))
@@ -481,21 +490,28 @@
   ([ds] (sqlite-record-store ds {}))
   ([ds {:keys [cache-capacity] :or {cache-capacity default-cache-capacity}}]
    (let [^Connection conn (jdbc/get-connection ds)]
-     (jdbc/execute-one! conn ["PRAGMA journal_mode=WAL"])
-     (jdbc/execute-one! conn ["PRAGMA synchronous=NORMAL"])
-     ;; SQLite is single-writer; wait out a lock rather than fail with SQLITE_BUSY.
-     (jdbc/execute-one! conn ["PRAGMA busy_timeout=5000"])
-     (ensure-schema! conn)
-     (let [store (->SqliteRecordStore conn (ReentrantLock.) (atom (load-high-water conn))
-                                      (lru cache-capacity) (lru cache-capacity) (atom nil))]
-       (reset! (:dur-id store)
-               (dur/register!
-                {;; SQLite's own `synchronous=NORMAL` decides when a write reaches the
-                 ;; platter, and there is no client-side buffer here for the engine to
-                 ;; force — so the fsync tick is a no-op with a reason rather than an
-                 ;; empty function.  Registered for the **close**: a JVM that exits
-                 ;; without one still releases the connection and its WAL.
-                 :fsync (fn [_] nil)
-                 :close (fn [] (locked (:lock store) (.close ^Connection (:conn store))))
-                 :label (str "sqlite-records " ds)}))
-       store))))
+     (try
+       (jdbc/execute-one! conn ["PRAGMA journal_mode=WAL"])
+       (jdbc/execute-one! conn ["PRAGMA synchronous=NORMAL"])
+       ;; SQLite is single-writer; wait out a lock rather than fail with SQLITE_BUSY.
+       (jdbc/execute-one! conn ["PRAGMA busy_timeout=5000"])
+       (ensure-schema! conn)
+       (let [store (->SqliteRecordStore conn (ReentrantLock.) (atom (load-high-water conn))
+                                        (lru cache-capacity) (lru cache-capacity) (atom nil))]
+         (reset! (:dur-id store)
+                 (dur/register!
+                  {;; SQLite's own `synchronous=NORMAL` decides when a write reaches the
+                   ;; platter, and there is no client-side buffer here for the engine to
+                   ;; force — so the fsync tick is a no-op with a reason rather than an
+                   ;; empty function.  Registered for the **close**: a JVM that exits
+                   ;; without one still releases the connection and its WAL.
+                   :fsync (fn [_] nil)
+                   :close (fn [] (locked (:lock store) (.close ^Connection (:conn store))))
+                   :label (str "sqlite-records " ds)}))
+         store)
+       ;; a throw between the borrow and `register!` means no `close` ever runs;
+       ;; release the connection (and its WAL handle) rather than leaking one per
+       ;; retried open of a corrupt or locked file.
+       (catch Throwable t
+         (.close conn)
+         (throw t))))))

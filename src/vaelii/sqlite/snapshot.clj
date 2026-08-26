@@ -93,6 +93,14 @@
   ^String [section]
   (if (keyword? section) (name section) (str section)))
 
+(defn- table-exists?
+  "True when `table` exists on `ds` — the guard that keeps a read of a database no
+  sink has written (and a `drop-image!` over one) answering quietly rather than
+  throwing `no such table`."
+  [ds ^String table]
+  (some? (jdbc/execute-one!
+          ds ["SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?" table])))
+
 (defn- manifest-entry-count ^long [manifest]
   (reduce + 0 (map (comp long :count val) (:sections manifest))))
 
@@ -165,25 +173,35 @@
   ([ds image {:keys [chunk-size] :or {chunk-size 10000}}]
    (ensure-schema! ds)
    (let [^Connection conn (jdbc/get-connection ds)]
-     ;; SQLite is single-writer; wait out a concurrent writer's lock rather than
-     ;; failing the image with SQLITE_BUSY the instant one is held.
-     (jdbc/execute-one! conn ["PRAGMA busy_timeout = 5000"])
-     (.setAutoCommit conn false)
-     (jdbc/execute-one! conn ["DELETE FROM vaelii_snapshot_section  WHERE image = ?" image])
-     (jdbc/execute-one! conn ["DELETE FROM vaelii_snapshot_manifest WHERE image = ?" image])
-     (->SqliteSink conn image (long chunk-size) (volatile! false)))))
+     (try
+       ;; SQLite is single-writer; wait out a concurrent writer's lock rather than
+       ;; failing the image with SQLITE_BUSY the instant one is held.
+       (jdbc/execute-one! conn ["PRAGMA busy_timeout = 5000"])
+       (.setAutoCommit conn false)
+       (jdbc/execute-one! conn ["DELETE FROM vaelii_snapshot_section  WHERE image = ?" image])
+       (jdbc/execute-one! conn ["DELETE FROM vaelii_snapshot_manifest WHERE image = ?" image])
+       (->SqliteSink conn image (long chunk-size) (volatile! false))
+       ;; a throw between the borrow and the record means no `close` ever runs;
+       ;; release the connection on the way out rather than leaking one per retry.
+       (catch Throwable t
+         (.close conn)
+         (throw t))))))
 
 ;; ---- the source ---------------------------------------------------------
 
 (defrecord SqliteSource [ds image]
   snap/SnapshotSource
   (read-manifest [_]
-    (some-> (jdbc/execute-one!
-             ds
-             ["SELECT manifest FROM vaelii_snapshot_manifest WHERE image = ?" image]
-             {:builder-fn rs/as-unqualified-lower-maps})
-            :manifest
-            nippy/thaw))
+    ;; nil rather than `no such table` on a database no sink has touched: the seam
+    ;; reads "the manifest, or nil when the image is absent", and a first run over a
+    ;; fresh file is exactly that absence.
+    (when (table-exists? ds "vaelii_snapshot_manifest")
+      (some-> (jdbc/execute-one!
+               ds
+               ["SELECT manifest FROM vaelii_snapshot_manifest WHERE image = ?" image]
+               {:builder-fn rs/as-unqualified-lower-maps})
+              :manifest
+              nippy/thaw)))
   (read-section [_ section]
     (mapcat nippy/thaw (section-chunks ds image (sect-name section)))))
 
@@ -199,5 +217,7 @@
 (defn drop-image!
   "Remove an image's sections and manifest.  A no-op if the tables are absent."
   [ds image]
-  (jdbc/execute-one! ds ["DELETE FROM vaelii_snapshot_section  WHERE image = ?" image])
-  (jdbc/execute-one! ds ["DELETE FROM vaelii_snapshot_manifest WHERE image = ?" image]))
+  (when (table-exists? ds "vaelii_snapshot_section")
+    (jdbc/execute-one! ds ["DELETE FROM vaelii_snapshot_section  WHERE image = ?" image]))
+  (when (table-exists? ds "vaelii_snapshot_manifest")
+    (jdbc/execute-one! ds ["DELETE FROM vaelii_snapshot_manifest WHERE image = ?" image])))

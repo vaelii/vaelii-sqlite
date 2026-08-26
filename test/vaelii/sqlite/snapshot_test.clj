@@ -109,3 +109,25 @@
         (.close ^java.io.Closeable sink))    ; no commit! — rollback
       (is (nil? (snap/read-manifest (sqlite/sqlite-source ds image)))
           "no committed manifest, so the image reads as absent"))))
+
+;; ---- a database no sink has written --------------------------------------
+
+(deftest a-database-no-sink-has-written-reads-as-absent
+  ;; a fresh file with no image tables is the seam's absent case, not an error:
+  ;; `read-manifest` answers nil, `load-index!` reads that as `:absent` and
+  ;; rebuilds, and `drop-image!` is the no-op its docstring claims.
+  (let [file (File/createTempFile "vaelii-sqlite-snap" ".db")
+        path (.getAbsolutePath file)
+        ds   {:dbtype "sqlite" :dbname path}]
+    (try
+      (is (nil? (snap/read-manifest (sqlite/sqlite-source ds "never-written")))
+          "no tables reads as no manifest")
+      (let [kb (v/open-kb {:backend :memory})]
+        (is (= {:index :rebuild :reason :absent}
+               (snap/load-index! (sqlite/sqlite-source ds "never-written") (:index kb) "stamp"))
+            "so a first-run load-index! rebuilds rather than throwing"))
+      (is (do (sqlite/drop-image! ds "never-written") true)
+          "and drop-image! is quiet")
+      (finally
+        (doseq [suffix ["" "-wal" "-shm"]]
+          (.delete (File. (str path suffix))))))))

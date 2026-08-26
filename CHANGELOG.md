@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.13.0 — 2026-08-25 — "the absent database, and the doors that stay quiet"
+
+- **A source over a database no sink has written answers absent, and cleanup is
+  the no-op it claims.** `read-manifest` on a file with no image tables answers
+  nil — the seam's absent case — so a first-run `load-index!` reports
+  `{:index :rebuild :reason :absent}` instead of throwing `no such table`, and
+  `drop-image!` skips a table that is not there, as its docstring says.
+  *Class:* Fix. *Migration:* none.
+
+- **The four quiet doors are quiet.** `put-provenance`, `delete-provenance!`,
+  `mark-premise` and `unmark-premise!` gate on `id-ok?` the way every fetch
+  does, so a handle this store could never have issued — an informant keyword —
+  is a no-op rather than a driver error or a `ClassCastException` out of the
+  cache key. *Class:* Fix. *Migration:* none.
+
+- **A failed open releases its connection.** `sqlite-record-store` and
+  `sqlite-sink` close the connection they borrowed when construction throws
+  past the borrow, so a retried open of a corrupt or locked file no longer
+  leaks a handle and its WAL per attempt. *Class:* Fix. *Migration:* none.
+
 ## 0.12.0 — 2026-08-23 — "a KB image and a live store, in SQLite"
 
 First release of the SQLite sibling (`com.vaelii/sqlite`) — an

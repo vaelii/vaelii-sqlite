@@ -313,3 +313,20 @@
             (is (= 49 (cap/count-sentexes store)))
             (is (nil? (cap/some-premise-id store))
                 "the premise row went with the record, so nothing is marked")))))))
+
+;; ---- the quiet doors stay quiet ------------------------------------------
+
+(deftest a-handle-this-store-could-not-have-issued-is-answered-not-thrown
+  ;; `id-ok?`'s contract, kept by every fetch and by these four ops alike: an
+  ;; informant keyword reaches them, and the answer is a quiet no-op, never a
+  ;; driver error or a ClassCastException out of the cache key.
+  (with-temp-db
+    (fn [ds]
+      (with-open [store (rec/sqlite-record-store ds)]
+        (doseq [[label f] [["mark-premise"       #(p/mark-premise store :informant :default)]
+                           ["unmark-premise!"    #(p/unmark-premise! store :informant)]
+                           ["put-provenance"     #(p/put-provenance store :informant {:a 1})]
+                           ["delete-provenance!" #(p/delete-provenance! store :informant)]]]
+          (is (nil? (try (f) nil (catch Exception e e))) (str label " is quiet")))
+        (is (= :default (p/premise-strength store :informant))
+            "and premise-strength answers the default, as for any unknown handle")))))
