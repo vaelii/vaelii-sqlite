@@ -24,7 +24,7 @@
   * every record is one row in `record (id, kind, frame, premise, strength)` — the
     handle is the primary key, `kind` splits sentexes (0) from justifications (1),
     and `frame` is the **whole record** nippy-frozen, so a fetch thaws back
-    type-identical (`AtomicSentex` stays an `AtomicSentex`);
+    type-identical (`LiteralSentex` stays a `LiteralSentex`);
   * a sentex's **assumption strength** rides the `strength` column as the
     authoritative value and is `assoc`ed back onto the thawed record on read — so
     `mark-premise` is a one-row column update, never a frame rewrite, and the

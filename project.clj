@@ -1,4 +1,4 @@
-(defproject com.vaelii/sqlite "0.13.0"
+(defproject com.vaelii/sqlite "0.15.0"
   :description "SQLite targets for vaelii's storage seams. The first is the
                 snapshot sink (vaelii.sqlite.snapshot): a SnapshotSink /
                 SnapshotSource over a single SQLite file, so a KB image — the index
@@ -30,7 +30,7 @@
    ;; CONSUMER of this adapter resolves, and it is a floor rather than a convenience.
    ;; The record store tallies its fetches through `vaelii.impl.profile/record-fetch`,
    ;; which lands in 0.11.0 — so that is the floor, above the 0.9.0 the sink alone needs.
-   [com.vaelii/vaelii "0.13.0"]
+   [com.vaelii/vaelii "0.15.0"]
    ;; the sink's own deps — declared here, not leaned on through core, so a change
    ;; in core's deps cannot break this adapter's load.  Carries the xerial SQLite
    ;; JDBC driver only — no postgresql — so a pure-sqlite run stays minimal.
