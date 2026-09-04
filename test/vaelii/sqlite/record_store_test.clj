@@ -131,7 +131,7 @@
           (is (= :monotonic (:strength (p/get-sentex store a)))
               "and is reflected on the fetched record"))))))
 
-(deftest a-batch-annotate-lands-what-the-one-row-door-lands
+(deftest a-batch-annotate-lands-what-the-one-row-entry-point-lands
   ;; `mark-premise-batch` / `put-provenance-batch` are one transaction where the
   ;; protocol's own ops are a transaction apiece, so what has to be pinned is that nothing
   ;; about the result moves — the guard against marking a handle with no sentex included,
@@ -261,10 +261,10 @@
 ;; ---- the roster, and the questions that do not need it -------------------
 
 (deftest the-enumerations-answer-a-compressed-roster
-  ;; The seam says a `java.util.Set`, not a `PersistentHashSet` — and a SQLite store's
+  ;; The protocol says a `java.util.Set`, not a `PersistentHashSet` — and a SQLite store's
   ;; enumeration is a table scan whatever the file is on, so the roster it hands back is
   ;; the caller's heap at 48–75 bytes a handle.  What is asserted is that this store
-  ;; answers the compressed one and that it reads as the set the reference backend
+  ;; answers the compressed one and that it equals the set the reference backend
   ;; answers; core's `roster_test` owns the shape itself.
   (with-temp-db
     (fn [ds]
@@ -276,7 +276,7 @@
                                ["justification-ids" (p/justification-ids store)]
                                ["premise-ids" (p/premise-ids store)]]]
             (is (roster/roster? got) (str label " answers a compressed roster")))
-          (testing "and it reads as the set it replaces"
+          (testing "and it equals the set it replaces"
             (is (= (set ids) (p/sentex-ids store)))
             (is (= (p/sentex-ids store) (set ids)) "equal whichever side it is on")
             (is (= #{j} (p/justification-ids store)))
@@ -314,7 +314,7 @@
             (is (nil? (cap/some-premise-id store))
                 "the premise row went with the record, so nothing is marked")))))))
 
-;; ---- the quiet doors stay quiet ------------------------------------------
+;; ---- the quiet entry points stay quiet ------------------------------------------
 
 (deftest a-handle-this-store-could-not-have-issued-is-answered-not-thrown
   ;; `id-ok?`'s contract, kept by every fetch and by these four ops alike: an

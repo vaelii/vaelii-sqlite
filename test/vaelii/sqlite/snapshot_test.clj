@@ -47,7 +47,7 @@
               "and the committed manifest is readable"))))))
 
 (deftest a-section-cross-loads-with-the-memory-medium
-  ;; the portability the seam exists to give: a section written to SQLite reads
+  ;; the portability the protocol exists to give: a section written to SQLite reads
   ;; back the same frames a memory medium holds for it
   (with-image "rt-cross"
     (fn [ds image]
@@ -113,7 +113,7 @@
 ;; ---- a database no sink has written --------------------------------------
 
 (deftest a-database-no-sink-has-written-reads-as-absent
-  ;; a fresh file with no image tables is the seam's absent case, not an error:
+  ;; a fresh file with no image tables is the protocol's absent case, not an error:
   ;; `read-manifest` answers nil, `load-index!` reads that as `:absent` and
   ;; rebuilds, and `drop-image!` is the no-op its docstring claims.
   (let [file (File/createTempFile "vaelii-sqlite-snap" ".db")

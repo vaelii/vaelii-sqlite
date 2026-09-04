@@ -72,7 +72,7 @@
         (is (.exists (File. (str dir "/records.sqlite")))
             "the store is a single file named records.sqlite under the KB directory")))))
 
-(deftest an-import-lands-through-the-bulk-seam-and-holds-the-same-kb
+(deftest an-import-lands-through-the-bulk-protocol-and-holds-the-same-kb
   ;; `import!` writes its records through `protocols/BulkLoading` when the store has one,
   ;; which here is a transaction per batch instead of the transaction-per-record a `put`
   ;; is.  What that must not buy is a different KB: the same dump into a RAM KB and into a

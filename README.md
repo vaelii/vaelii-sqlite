@@ -9,22 +9,22 @@
 [![docstrings](.github/badges/docstrings.svg)](src/vaelii/sqlite/snapshot.clj)
 <!-- badges:end -->
 
-SQLite targets for [vaelii](https://github.com/vaelii/vaelii)'s storage seams —
+SQLite targets for [vaelii](https://github.com/vaelii/vaelii)'s storage protocols —
 an **Apache-2.0 adapter** (`com.vaelii/sqlite`) on the SSPL engine. It depends on
 core; core never depends on it.
 
 ## What's here
 
-Two SQLite lanes over the engine's storage seams — a **snapshot sink** (a KB
+Two SQLite lanes over the engine's storage protocols — a **snapshot sink** (a KB
 image in a file) and a **record store** (a live durable backend). Pick by whether
 you want a frozen image you re-export or an always-current store the KB reads and
 writes.
 
 ### Snapshot sink — `vaelii.sqlite.snapshot`
 
-A `SnapshotSink` / `SnapshotSource` over the engine's snapshot seam
+A `SnapshotSink` / `SnapshotSource` over the engine's snapshot protocol
 (`vaelii.impl.io.snapshot`). It puts a **KB image** in a single file: the index
-projection today, and any of the seam's named sections as they land.
+projection today, and any of the protocol's named sections as they land.
 
 A snapshot is `O(sections)` bulk blob transfers, not `O(records)` tiny probes, so
 it is cheap on any store and cheapest of all on SQLite — no server to stand up,
@@ -32,7 +32,7 @@ just a file. "Put my KB in a file" — for backup, for shipping a corpus to anot
 host, for embedding a KB beside an app — is answered here, and the file is the
 artifact you copy.
 
-Two properties the seam gives, and a database sharpens:
+Two properties the protocol gives, and a database sharpens:
 
 - **One transaction, manifest last.** The whole image writes inside a single
   transaction and the manifest row commits it, so a crash leaves no manifest and
@@ -104,7 +104,7 @@ datasource, if you need memory.
 ## Development
 
 `checkouts/vaelii -> ../vaelii` shadows the core dependency with dev-core source,
-so the seam is the checkout's, not a jar's. Run `scripts/link-checkouts.sh` after
+so the protocol is the checkout's, not a jar's. Run `scripts/link-checkouts.sh` after
 a fresh clone (checkouts/ is gitignored).
 
 ```

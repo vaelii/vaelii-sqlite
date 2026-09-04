@@ -20,7 +20,7 @@ Only the latest release (and `main`) receive security fixes.
 
 ## Scope
 
-`vaelii-sqlite` is an Apache-2.0 adapter on the vaelii snapshot seam: it writes a
+`vaelii-sqlite` is an Apache-2.0 adapter on the vaelii snapshot protocol: it writes a
 KB image to a single SQLite file and reads it back (`vaelii.sqlite.snapshot`). It
 depends on the [vaelii](https://github.com/vaelii/vaelii) engine and is never
 depended on by it; it has no network surface of its own — the image is a local

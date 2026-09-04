@@ -1,7 +1,7 @@
 ;; SPDX-License-Identifier: Apache-2.0
 ;; Copyright © 2026 Vaelii LLC and the Vaelii contributors.
 (ns vaelii.sqlite.record-store
-  "A SQLite target for the engine's **record store** seam
+  "A SQLite target for the engine's **record store** protocol
   (`vaelii.impl.protocols/RecordStore`) — the durable ground truth a KB is
   recovered from: canonical sentexes and justifications, keyed by integer handle,
   in a single SQLite file.
@@ -18,7 +18,7 @@
 
   ## The shape
 
-  The seam is 17 ops (`put-`/`get-`/`delete-` for sentexes, justifications and
+  The protocol is 17 ops (`put-`/`get-`/`delete-` for sentexes, justifications and
   provenance; `next-id`; the `*-ids` enumerations; premise marking).  Here:
 
   * every record is one row in `record (id, kind, frame, premise, strength)` — the
@@ -255,7 +255,7 @@
   ;; `unmark-premise!`: `id-ok?`'s contract is that a handle this store could never
   ;; have issued is answered quietly, not thrown.  The memory store makes these four
   ;; ops no-ops for one, and unguarded `(ckey id)` on an informant keyword is a
-  ;; ClassCastException out of a door that must stay quiet.
+  ;; ClassCastException out of an entry point that must stay quiet.
   (put-provenance [_ id prov]
     (when (id-ok? id)
       (locked lock
@@ -377,7 +377,7 @@
 
   It is a **load and not an upsert**: a plain `INSERT`, so a handle the store already
   holds raises on the primary key rather than being overwritten silently.  That is the
-  contract the seam's other implementation (`COPY`, in the Postgres adapter) has, and a
+  contract the protocol's other implementation (`COPY`, in the Postgres adapter) has, and a
   bulk path that quietly replaced a record the caller did not know was there would be the
   worse answer on both.
 

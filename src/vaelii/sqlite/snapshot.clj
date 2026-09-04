@@ -1,7 +1,7 @@
 ;; SPDX-License-Identifier: Apache-2.0
 ;; Copyright © 2026 Vaelii LLC and the Vaelii contributors.
 (ns vaelii.sqlite.snapshot
-  "A SQLite target for the engine's snapshot seam
+  "A SQLite target for the engine's snapshot protocol
   (`vaelii.impl.io.snapshot`) — a `SnapshotSink` that writes a KB image to a
   single-file database and a `SnapshotSource` that reads it back.
 
@@ -16,7 +16,7 @@
 
   ## The shape
 
-  The seam is two ops each side (`write-section!`/`commit!`,
+  The protocol is two ops each side (`write-section!`/`commit!`,
   `read-manifest`/`read-section`) and the image is a set of **named sections**
   plus a **manifest**.  Here:
 
@@ -34,7 +34,7 @@
     image is discarded and the source rebuilds, never trusted.
 
   A section written through this sink reads back frame-identical through any
-  source (file, memory, Postgres, SQLite) — the portability the seam exists to
+  source (file, memory, Postgres, SQLite) — the portability the protocol exists to
   give.
 
   ## The file
@@ -49,7 +49,7 @@
 
   ## Boundary
 
-  Apache-2.0, and an **adapter**: it depends on the SSPL engine's seam and is
+  Apache-2.0, and an **adapter**: it depends on the SSPL engine's protocol and is
   never depended on by it.  It implements `vaelii.impl.io.snapshot`'s protocols,
   the same way a record-store adapter implements `vaelii.impl.protocols`."
   (:require [next.jdbc :as jdbc]
@@ -192,7 +192,7 @@
 (defrecord SqliteSource [ds image]
   snap/SnapshotSource
   (read-manifest [_]
-    ;; nil rather than `no such table` on a database no sink has touched: the seam
+    ;; nil rather than `no such table` on a database no sink has touched: the protocol
     ;; reads "the manifest, or nil when the image is absent", and a first run over a
     ;; fresh file is exactly that absence.
     (when (table-exists? ds "vaelii_snapshot_manifest")

@@ -3,7 +3,7 @@ name: test
 # The adapter's own suite (test/vaelii/sqlite/snapshot_test.clj). SQLite is an
 # embedded driver over a file, so there is NO external service to stand up and
 # nothing to gate on — every test creates a fresh temp-file database, runs, and
-# deletes it. The tests require the engine (vaelii.core / the snapshot seam), so
+# deletes it. The tests require the engine (vaelii.core / the snapshot protocol), so
 # core is checked out alongside and wired into checkouts/.
 #
 # Dispatch-only (matching the engine's policy for the private dev repos). Every

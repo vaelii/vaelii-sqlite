@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.16.0 — 2026-09-04 — "the prose says what the code does, and nothing else moves"
+
+No behaviour change, no schema change and nothing a caller can observe. A database written
+under 0.15.0 opens unchanged and the tables do not move.
+
+- **The prose here is reworded to say what the code does.** Comments, docstrings,
+  changelog entries and test names now state the mechanism in literal technical language,
+  and `scripts/check-prose.py` — the engine's check, adapted to this tree's layout — runs
+  as the `prose` row in `scripts/lint.sh` with a `lein lint-prose` alias. The two
+  metaphors this repo carried are replaced by what each one named: the engine's storage
+  protocols (`RecordStore`, `SnapshotSink` / `SnapshotSource`) and the public entry point
+  a caller reaches them through. The evaluative phrasings become statements of what the
+  assertion checks. *Class:* **Fix** — docstrings and test names only; no table, column or
+  call moves. *Migration:* none.
+
+**The number.** The engine, the plugin and both adapters ship one version string, checked
+at the cut. Requires core 0.16.0, which carries three **Breaking** entries and one
+**Refusal**: a `:missing-adapter` refusal split out of `:unknown-backend`, a CLI operand
+count moved from `:unknown-option` to `:bad-args`, `different` no longer provable against
+an unpinned `indeterminate_term`, and a rule concluding an indeterminacy from a
+`different` antecedent refused as `:not-stratified`. The first reaches this repo in one
+direction only: with this adapter on the classpath, a `:sqlite` records axis resolves and no
+refusal is raised. The other three read a KB rather than a store and reach nothing
+here.
+
 ## 0.15.0 — 2026-09-01 — "nothing moved, and the family ships one number"
 
 The first cut of this adapter since 0.13.0 — it sat 0.14.0 out — and it carries no
@@ -19,16 +44,16 @@ under 0.13.0 opens unchanged and the tables do not move.
 **The number.** The engine, the plugin and both adapters ship one version string, checked
 at the cut. Requires core 0.15.0.
 
-## 0.13.0 — 2026-08-25 — "the absent database, and the doors that stay quiet"
+## 0.13.0 — 2026-08-25 — "the absent database, and the entry points that stay quiet"
 
 - **A source over a database no sink has written answers absent, and cleanup is
   the no-op it claims.** `read-manifest` on a file with no image tables answers
-  nil — the seam's absent case — so a first-run `load-index!` reports
+  nil — the protocol's absent case — so a first-run `load-index!` reports
   `{:index :rebuild :reason :absent}` instead of throwing `no such table`, and
   `drop-image!` skips a table that is not there, as its docstring says.
   *Class:* Fix. *Migration:* none.
 
-- **The four quiet doors are quiet.** `put-provenance`, `delete-provenance!`,
+- **The four quiet entry points are quiet.** `put-provenance`, `delete-provenance!`,
   `mark-premise` and `unmark-premise!` gate on `id-ok?` the way every fetch
   does, so a handle this store could never have issued — an informant keyword —
   is a no-op rather than a driver error or a `ClassCastException` out of the
@@ -43,7 +68,7 @@ at the cut. Requires core 0.15.0.
 
 First release of the SQLite sibling (`com.vaelii/sqlite`) — an
 **Apache-2.0** adapter on the SSPL engine. It depends on core; core never depends
-on it. Requires core **0.12.0**: the record store answers seams that land there — the
+on it. Requires core **0.12.0**: the record store answers protocols that land there — the
 bulk sink, the tallies, the two bare `BulkAnnotating` writes — and reads
 `vaelii.impl.profile/record-fetch`, which lands in 0.11.0. The family releases in
 lockstep, one version string across the engine, the plugin and the two adapters, which
@@ -51,7 +76,7 @@ is why a first release is numbered 0.12.0.
 
 - **A bulk load is a transaction per batch, and `import!` takes it.** A `put` here is a
   transaction of its own — a commit and a WAL write per record — which is the whole of
-  what a corpus load pays. The store answers core's `BulkLoading` seam
+  what a corpus load pays. The store answers core's `BulkLoading` protocol
   (`open-sentex-sink` / `open-justification-sink`) with a sink that lands `:batch` rows
   per transaction in one `execute-batch!`, so an `import!` writes its records through it
   without naming this namespace. It is a **load and not an upsert** — a plain `INSERT`,
@@ -78,13 +103,13 @@ is why a first release is numbered 0.12.0.
   `Tallying`: `open-kb` asks *how many records* and *is there one at all* twice before the
   KB has answered anything, and each is now a `count(*)` or a `LIMIT 1` instead of a table
   scan and a roster built out of it. *Class:* Additive — the enumerations answer the same
-  handles, and the seam's contract is what says a set may be either shape.
+  handles, and the protocol's contract is what says a set may be either shape.
 
 - **A SQLite snapshot sink and source.** `vaelii.sqlite.snapshot` provides
   `sqlite-sink` (a `SnapshotSink` writing a KB image to a single-file database) and
   `sqlite-source` (a read-only `SnapshotSource` reading it back), over the engine's
-  snapshot seam (`vaelii.impl.io.snapshot`). It holds the index projection today
-  and any of the seam's named sections as they land. A section written through this
+  snapshot protocol (`vaelii.impl.io.snapshot`). It holds the index projection today
+  and any of the protocol's named sections as they land. A section written through this
   sink reads back frame-identical through any source — file, memory, or SQLite —
   and a mismatched image is discarded and rebuilt, never trusted (the engine's
   shared `snapshot/decision`). *Class:* Additive — a new snapshot target; nothing in
@@ -119,4 +144,4 @@ is why a first release is numbered 0.12.0.
 Pick by shape: a **snapshot** is a frozen image you re-export (backup, shipping a
 corpus); a **record store** is an always-current backend the KB reads and writes.
 
-Docs: this repo's `README.md`; the seam is [core's storage.md](https://github.com/vaelii/vaelii/blob/main/docs/storage.md).
+Docs: this repo's `README.md`; the protocol is [core's storage.md](https://github.com/vaelii/vaelii/blob/main/docs/storage.md).
