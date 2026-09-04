@@ -1,4 +1,4 @@
-(defproject com.vaelii/sqlite "0.16.0"
+(defproject com.vaelii/sqlite "0.16.1-SNAPSHOT"
   :description "SQLite targets for vaelii's storage protocols. The first is the
                 snapshot sink (vaelii.sqlite.snapshot): a SnapshotSink /
                 SnapshotSource over a single SQLite file, so a KB image — the index
