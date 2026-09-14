@@ -1,4 +1,4 @@
-(defproject com.vaelii/sqlite "0.16.0"
+(defproject com.vaelii/sqlite "0.19.0"
   :description "SQLite targets for vaelii's storage protocols. The first is the
                 snapshot sink (vaelii.sqlite.snapshot): a SnapshotSink /
                 SnapshotSource over a single SQLite file, so a KB image — the index
@@ -24,19 +24,19 @@
   :global-vars {*warn-on-reflection* true}
 
   :dependencies
-  [[org.clojure/clojure "1.12.5"]
+  [[org.clojure/clojure "1.12.6"]
    ;; the engine.  checkouts/vaelii -> ../vaelii shadows this with the dev-core
    ;; SOURCE, so a dev run reads whatever that tree is; the coordinate below is what a
    ;; CONSUMER of this adapter resolves, and it is a floor rather than a convenience.
    ;; The record store tallies its fetches through `vaelii.impl.profile/record-fetch`,
    ;; which lands in 0.11.0 — so that is the floor, above the 0.9.0 the sink alone needs.
-   [com.vaelii/vaelii "0.16.0"]
+   [com.vaelii/vaelii "0.19.0"]
    ;; the sink's own deps — declared here, not leaned on through core, so a change
    ;; in core's deps cannot break this adapter's load.  Carries the xerial SQLite
    ;; JDBC driver only — no postgresql — so a pure-sqlite run stays minimal.
    [com.github.seancorfield/next.jdbc "1.3.1118"]
-   [org.xerial/sqlite-jdbc "3.53.2.0"]
-   [com.taoensso/nippy "3.8.1"]]
+   [org.xerial/sqlite-jdbc "3.53.4.0"]
+   [com.taoensso/nippy "3.9.0"]]
 
   ;; cljfmt settings mirror vaelii core (no :extra-indents — this adapter uses no
   ;; custom :style/indent macros; those the engine harvests live in core).

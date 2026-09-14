@@ -24,7 +24,10 @@
   * every record is one row in `record (id, kind, frame, premise, strength)` — the
     handle is the primary key, `kind` splits sentexes (0) from justifications (1),
     and `frame` is the **whole record** nippy-frozen, so a fetch thaws back
-    type-identical (`LiteralSentex` stays a `LiteralSentex`);
+    type-identical (`LiteralSentex` stays a `LiteralSentex`), and passes the thawed
+    record through the engine's codec (`codec/decode-sentex`,
+    `codec/decode-justification`), which drops the fields the running engine's record
+    types do not have;
   * a sentex's **assumption strength** rides the `strength` column as the
     authoritative value and is `assoc`ed back onto the thawed record on read — so
     `mark-premise` is a one-row column update, never a frame rewrite, and the
@@ -55,6 +58,7 @@
   (:require [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
             [taoensso.nippy :as nippy]
+            [vaelii.impl.disk.codec :as codec]
             [vaelii.impl.disk.durability :as dur]
             [vaelii.impl.profile :as prof]
             [vaelii.impl.protocols :as p]
@@ -199,7 +203,7 @@
                                   lower-maps)]
                     ;; the column is authoritative — assoc it back so a mark-premise that
                     ;; only touched the column is reflected without a frame rewrite.
-                    (let [sx (assoc (nippy/thaw (frame-of row)) :strength (str->strength (:strength row)))]
+                    (let [sx (assoc (codec/decode-sentex (nippy/thaw (frame-of row))) :strength (str->strength (:strength row)))]
                       (.put sx-cache (ckey id) sx)
                       sx))))))
 
@@ -238,7 +242,7 @@
                                   conn ["SELECT frame FROM record WHERE id=? AND kind=?"
                                         id kind-justification]
                                   lower-maps)]
-                    (let [d (nippy/thaw (frame-of row))]
+                    (let [d (codec/decode-justification (nippy/thaw (frame-of row)))]
                       (.put j-cache (ckey id) d)
                       d))))))
 

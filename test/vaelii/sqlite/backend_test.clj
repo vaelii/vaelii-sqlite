@@ -37,7 +37,7 @@
       ;; would contend on the file).
       (let [kb (v/open-kb {:backend :sqlite :dir dir})]
         (try
-          (v/assert kb '(implies (p ?x) (q ?x)) 'CxTest)
+          (v/assert kb '(implies (p ?x) (q ?x)) 'CxTest {:direction :forward})
           (v/assert kb '(p Foo) 'CxTest)
           (v/assert kb '(likes Felix Tuna) 'CxTest)
           (is (seq (v/sentexes-matching kb '(q Foo) 'CxTest))
@@ -81,7 +81,7 @@
     (fn [dir]
       (let [dump (str dir "/dump")
             src  (v/open-kb {:backend :memory :space (gensym "impsrc")})]
-        (v/assert src '(implies (p ?x) (q ?x)) 'CxTest)
+        (v/assert src '(implies (p ?x) (q ?x)) 'CxTest {:direction :forward})
         (v/assert src '(p Foo) 'CxTest)
         (v/assert src '(likes Felix Tuna) 'CxTest {:strength :monotonic})
         (v/export! src dump {:compression :none})
