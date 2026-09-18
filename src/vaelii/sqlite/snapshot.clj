@@ -2,7 +2,7 @@
 ;; Copyright © 2026 Vaelii LLC and the Vaelii contributors.
 (ns vaelii.sqlite.snapshot
   "A SQLite target for the engine's snapshot protocol
-  (`vaelii.impl.io.snapshot`) — a `SnapshotSink` that writes a KB image to a
+  (`vaelii.impl.types.snapshot`) — a `SnapshotSink` that writes a KB image to a
   single-file database and a `SnapshotSource` that reads it back.
 
   This is the **good SQLite lane**.  A live records/index store over a database
@@ -30,7 +30,7 @@
     write rolls back the sections too, it does not leave half of them;
   * the validity stamp (`kv/index-layout-version` and the records fingerprint)
     rides both a **column** (queryable) and the manifest blob, and the
-    validate-or-discard check is the shared `snapshot/decision` — a mismatched
+    validate-or-discard check is the shared `vaelii.impl.io.snapshot/decision` — a mismatched
     image is discarded and the source rebuilds, never trusted.
 
   A section written through this sink reads back frame-identical through any
@@ -50,12 +50,12 @@
   ## Boundary
 
   Apache-2.0, and an **adapter**: it depends on the SSPL engine's protocol and is
-  never depended on by it.  It implements `vaelii.impl.io.snapshot`'s protocols,
+  never depended on by it.  It implements `vaelii.impl.types.snapshot`'s protocols,
   the same way a record-store adapter implements `vaelii.impl.protocols`."
   (:require [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
             [taoensso.nippy :as nippy]
-            [vaelii.impl.io.snapshot :as snap])
+            [vaelii.impl.types.snapshot :as snapshot-types])
   (:import [java.sql Connection]))
 
 ;; ---- schema -------------------------------------------------------------
@@ -123,7 +123,7 @@
 ;; ---- the sink -----------------------------------------------------------
 
 (defrecord SqliteSink [^Connection conn image ^long chunk-size committed?]
-  snap/SnapshotSink
+  snapshot-types/SnapshotSink
   (write-section! [_ section frames]
     (let [sect (sect-name section)
           n    (volatile! 0)
@@ -190,7 +190,7 @@
 ;; ---- the source ---------------------------------------------------------
 
 (defrecord SqliteSource [ds image]
-  snap/SnapshotSource
+  snapshot-types/SnapshotSource
   (read-manifest [_]
     ;; nil rather than `no such table` on a database no sink has touched: the protocol
     ;; reads "the manifest, or nil when the image is absent", and a first run over a
