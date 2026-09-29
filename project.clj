@@ -1,4 +1,10 @@
-(defproject com.vaelii/sqlite "0.20.0"
+;; The major version of the JDK evaluating this file, which is the one leiningen
+;; launches the project JVM on: `:jvm-opts` below names a flag 21 refuses.
+(def jdk-major
+  (Integer/parseInt
+   (second (re-find #"^(?:1\.)?(\d+)" (System/getProperty "java.specification.version")))))
+
+(defproject com.vaelii/sqlite "0.22.0"
   :description "SQLite targets for vaelii's storage protocols. The first is the
                 snapshot sink (vaelii.sqlite.snapshot): a SnapshotSink /
                 SnapshotSource over a single SQLite file, so a KB image — the index
@@ -23,6 +29,15 @@
   ;; :test profile flips it off so the test tree doesn't spam `lein test`.
   :global-vars {*warn-on-reflection* true}
 
+  ;; Declaring `:jvm-opts` replaces leiningen's `^:displace` `:base` vector, which
+  ;; drops the C1-only cap `:base` copies from a LEIN_JVM_OPTS naming "Tiered", and
+  ;; restores `:base`'s `-XX:-OmitStackTraceInFastThrow` so a test failure names its
+  ;; site. The two `--` flags silence the JDK 24+ warnings for JNA's native loads and
+  ;; aircompressor's (nippy LZ4) `sun.misc.Unsafe` calls; the Unsafe flag exists from
+  ;; 23, and 21 refuses to boot with it. Core's project.clj has the detail.
+  :jvm-opts ~(cond-> ["-XX:-OmitStackTraceInFastThrow" "--enable-native-access=ALL-UNNAMED"]
+               (<= 23 jdk-major) (conj "--sun-misc-unsafe-memory-access=allow"))
+
   :dependencies
   [[org.clojure/clojure "1.12.6"]
    ;; the engine.  checkouts/vaelii -> ../vaelii shadows this with the dev-core
@@ -30,7 +45,7 @@
    ;; CONSUMER of this adapter resolves, and it is a floor rather than a convenience.
    ;; The record store tallies its fetches through `vaelii.impl.profile/record-fetch`,
    ;; which lands in 0.11.0 — so that is the floor, above the 0.9.0 the sink alone needs.
-   [com.vaelii/vaelii "0.20.0"]
+   [com.vaelii/vaelii "0.22.0"]
    ;; the sink's own deps — declared here, not leaned on through core, so a change
    ;; in core's deps cannot break this adapter's load.  Carries the xerial SQLite
    ;; JDBC driver only — no postgresql — so a pure-sqlite run stays minimal.
@@ -47,6 +62,10 @@
            :insert-missing-whitespace?      true
            :remove-consecutive-blank-lines? true
            :sort-ns-references?             true}
+
+  ;; The lein launcher exports CLASSPATH (its own jar), so every nested `lein` under a
+  ;; `lein shell` alias prints "You have $CLASSPATH set"; nil drops it from the child.
+  :shell {:env {"CLASSPATH" nil}}
 
   :aliases
   ;; Static-analysis gates, mirroring vaelii core's. `lein lint` runs kondo +
