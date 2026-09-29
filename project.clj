@@ -4,7 +4,7 @@
   (Integer/parseInt
    (second (re-find #"^(?:1\.)?(\d+)" (System/getProperty "java.specification.version")))))
 
-(defproject com.vaelii/sqlite "0.22.0"
+(defproject com.vaelii/sqlite "0.22.1-SNAPSHOT"
   :description "SQLite targets for vaelii's storage protocols. The first is the
                 snapshot sink (vaelii.sqlite.snapshot): a SnapshotSink /
                 SnapshotSource over a single SQLite file, so a KB image — the index
