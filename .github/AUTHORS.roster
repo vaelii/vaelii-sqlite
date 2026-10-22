@@ -1,4 +1,4 @@
-# The roster of people whose commits may land.
+# The list of people whose commits may land.
 #
 # CONTRIBUTING.md, under Conventions: each commit's author is the person who
 # signs it off, a `Signed-off-by:` may only name someone who can make that
@@ -16,7 +16,7 @@
 # this — a `Signed-off-by:` certifies right-to-submit under whatever licence the
 # project carries, so a certification no one can make is void here too.
 #
-# The gate reads this file **from the base branch**, so a pull request cannot
+# The `authorship` check reads this file **from the base branch**, so a pull request cannot
 # admit its own author. Adding a line is a maintainer commit to `develop`.
 #
 # Format: one person per line. The first token is the name we file them under;
@@ -45,7 +45,7 @@
 
 # Nobody is admitted here ahead of a contribution. An account earns a line when
 # it opens a pull request against THIS repo and a maintainer admits it, which is
-# one commit on `develop` before the merge — so the roster records who has worked
+# one commit on `develop` before the merge — so the list records who has worked
 # on this repo rather than a copy of who has worked on another. A contributor
 # admitted on the engine is not admitted here, and does not need to be until they
 # send something here.

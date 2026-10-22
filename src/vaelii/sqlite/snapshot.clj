@@ -28,8 +28,8 @@
     and the caller rebuilds.  That is the file sink's \"write `manifest.edn`
     last\" rule, but enforced by the database rather than by ordering: a failed
     write rolls back the sections too, it does not leave half of them;
-  * the validity stamp (`kv/index-layout-version` and the records fingerprint)
-    rides both a **column** (queryable) and the manifest blob, and the
+  * the two values the validity check compares (`kv/index-layout-version` and the
+    records fingerprint) ride both a **column** (queryable) and the manifest blob, and the
     validate-or-discard check is the shared `vaelii.impl.io.snapshot/decision` — a mismatched
     image is discarded and the source rebuilds, never trusted.
 
@@ -68,6 +68,8 @@
      chunk   blob    NOT NULL,
      PRIMARY KEY (image, section, seq))")
 
+;; The column holding the records fingerprint keeps the name existing databases carry:
+;; `CREATE TABLE IF NOT EXISTS` never renames a column of a table already there.
 (def ^:private manifest-ddl
   "CREATE TABLE IF NOT EXISTS vaelii_snapshot_manifest (
      image         text    PRIMARY KEY,

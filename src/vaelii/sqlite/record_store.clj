@@ -60,9 +60,9 @@
             [taoensso.nippy :as nippy]
             [vaelii.impl.disk.codec :as codec]
             [vaelii.impl.disk.durability :as dur]
+            [vaelii.impl.handle-set :as handle-set]
             [vaelii.impl.profile :as prof]
-            [vaelii.impl.protocols :as p]
-            [vaelii.impl.roster :as roster])
+            [vaelii.impl.protocols :as p])
   (:import [java.sql Connection]
            [java.util ArrayList Collections LinkedHashMap Map]
            [java.util.concurrent.locks ReentrantLock]))
@@ -97,18 +97,18 @@
      k text    PRIMARY KEY,
      v integer NOT NULL)")
 
-(defn- id-roster
+(defn- id-handle-set
   "Every handle of `kind` (optionally narrowed by `and-clause`) as a
-  `vaelii.impl.roster` set.
+  `vaelii.impl.handle-set` set.
 
-  A roster and not a `PersistentHashSet<Long>` for the reason core's `docs/storage.md`
+  A handle set and not a `PersistentHashSet<Long>` for the reason core's `docs/storage.md`
   gives: the hash set retains 48–75 bytes a handle, and handles arrive in the
   near-contiguous run `next-id` mints, which a bitmap holds at a fraction of a byte
   apiece and probes faster.  `plan` rather than `execute!` so the walk never builds a
   result map per row on the way to discarding it — an embedded driver pays no round trip,
   but it pays that allocation."
   [conn kind and-clause]
-  (let [[add! finish] (roster/collector)]
+  (let [[add! finish] (handle-set/collector)]
     (reduce (fn [acc row] (add! (:id row)) acc)
             nil
             (jdbc/plan conn [(str "SELECT id FROM record WHERE kind=?" and-clause) kind]))
@@ -146,7 +146,7 @@
 
 (defn- id-ok?
   "The record protocol is asked for non-integer / negative handles — an informant
-  keyword lands here — and must answer nil, not throw.  Gate every fetch on this."
+  keyword lands here — and must answer nil, not throw.  Every fetch checks this first."
   [id]
   (and (integer? id) (not (neg? ^long id))))
 
@@ -283,9 +283,9 @@
               (jdbc/execute-one! conn ["DELETE FROM record_provenance WHERE id=?" id])))
     nil)
 
-  (sentex-ids [_] (locked lock (id-roster conn kind-sentex nil)))
+  (sentex-ids [_] (locked lock (id-handle-set conn kind-sentex nil)))
 
-  (justification-ids [_] (locked lock (id-roster conn kind-justification nil)))
+  (justification-ids [_] (locked lock (id-handle-set conn kind-justification nil)))
 
   (mark-premise [_ id strength]
     ;; guard on the sentex existing (no phantom premise): the UPDATE's WHERE is the
@@ -308,7 +308,7 @@
               (.remove sx-cache (ckey id))))
     nil)
 
-  (premise-ids [_] (locked lock (id-roster conn kind-sentex " AND premise=1")))
+  (premise-ids [_] (locked lock (id-handle-set conn kind-sentex " AND premise=1")))
 
   (premise-strength [_ id]
     (or (when (id-ok? id)
@@ -334,7 +334,7 @@
   p/Tallying
   ;; The counts and the samples the engine asks an enumeration for without needing the
   ;; enumeration.  Embedded means no round trip, so the saving here is not latency: it is
-  ;; that `open-kb` no longer scans the whole table and builds a roster out of it to
+  ;; that `open-kb` no longer scans the whole table and builds a handle set out of it to
   ;; answer *how many* and *is there one*, twice, before the KB has answered anything.
   (sentex-tally [_]
     (locked lock (long (or (:c (jdbc/execute-one!

@@ -3,19 +3,19 @@
 (ns vaelii.sqlite.record-store-test
   "The SQLite record store, exercised against a real single-file database.
 
-  There is no server to gate on — SQLite is an embedded driver over a file — so
+  There is no server to wait for — SQLite is an embedded driver over a file — so
   every test stands up a fresh temp-file database and deletes it.  The core
   assurance is an **oracle test**: the same op sequence run against a fresh
   in-memory `RecordStore` (the reference backend) and the SQLite store must yield
-  identical observations at every step, so the SQLite store is pinned to the
+  identical observations at every step, so the SQLite store is held to the
   reference's behaviour rather than to a re-derivation of the contract."
   (:require [clojure.test :refer [deftest is testing]]
             [vaelii.core :as v]
             [vaelii.impl.capabilities :as cap]
+            [vaelii.impl.handle-set :as handle-set]
             [vaelii.impl.memory :as mem]
             [vaelii.impl.profile :as prof]
             [vaelii.impl.protocols :as p]
-            [vaelii.impl.roster :as roster]
             [vaelii.sqlite.record-store :as rec])
   (:import [java.io File]))
 
@@ -173,7 +173,7 @@
 
 (deftest a-batch-annotate-lands-what-the-one-row-entry-point-lands
   ;; `mark-premise-batch` / `put-provenance-batch` are one transaction where the
-  ;; protocol's own ops are a transaction apiece, so what has to be pinned is that nothing
+  ;; protocol's own ops are a transaction apiece, so what the test asserts is that nothing
   ;; about the result moves — the guard against marking a handle with no sentex included,
   ;; which here is the UPDATE's own WHERE and is the same clause either way.
   (with-temp-db
@@ -298,14 +298,14 @@
             (is (nil? (p/get-provenance store a)) "no provenance")
             (is (= 1 (p/next-id store)) "and the counter is reset to mint from 1")))))))
 
-;; ---- the roster, and the questions that do not need it -------------------
+;; ---- the handle set, and the questions that do not need it ---------------
 
-(deftest the-enumerations-answer-a-compressed-roster
+(deftest the-enumerations-answer-a-compressed-handle-set
   ;; The protocol says a `java.util.Set`, not a `PersistentHashSet` — and a SQLite store's
-  ;; enumeration is a table scan whatever the file is on, so the roster it hands back is
+  ;; enumeration is a table scan whatever the file is on, so a hash set answer would be
   ;; the caller's heap at 48–75 bytes a handle.  What is asserted is that this store
   ;; answers the compressed one and that it equals the set the reference backend
-  ;; answers; core's `roster_test` owns the shape itself.
+  ;; answers; core's `handle_set_test` owns the shape itself.
   (with-temp-db
     (fn [ds]
       (with-open [store (rec/sqlite-record-store ds)]
@@ -315,7 +315,8 @@
           (doseq [[label got] [["sentex-ids" (p/sentex-ids store)]
                                ["justification-ids" (p/justification-ids store)]
                                ["premise-ids" (p/premise-ids store)]]]
-            (is (roster/roster? got) (str label " answers a compressed roster")))
+            (is (handle-set/handle-set? got)
+                (str label " answers a compressed handle set")))
           (testing "and it equals the set it replaces"
             (is (= (set ids) (p/sentex-ids store)))
             (is (= (p/sentex-ids store) (set ids)) "equal whichever side it is on")
@@ -326,7 +327,7 @@
             (is (= 200 (count (p/sentex-ids store))))
             (is (= (sort ids) (sort (p/sentex-ids store))) "and sorts to one sequence")))))))
 
-(deftest a-tally-agrees-with-the-roster
+(deftest a-tally-agrees-with-the-handle-set
   ;; `open-kb` asks how many records this store holds and whether it holds any, before
   ;; the KB has answered anything.  The property that matters is that the capability and
   ;; the enumeration answer the same thing, since core calls the helpers unconditionally.

@@ -4,7 +4,7 @@
   (Integer/parseInt
    (second (re-find #"^(?:1\.)?(\d+)" (System/getProperty "java.specification.version")))))
 
-(defproject com.vaelii/sqlite "0.22.0"
+(defproject com.vaelii/sqlite "0.28.0"
   :description "SQLite targets for vaelii's storage protocols. The first is the
                 snapshot sink (vaelii.sqlite.snapshot): a SnapshotSink /
                 SnapshotSource over a single SQLite file, so a KB image — the index
@@ -45,7 +45,7 @@
    ;; CONSUMER of this adapter resolves, and it is a floor rather than a convenience.
    ;; The record store tallies its fetches through `vaelii.impl.profile/record-fetch`,
    ;; which lands in 0.11.0 — so that is the floor, above the 0.9.0 the sink alone needs.
-   [com.vaelii/vaelii "0.22.0"]
+   [com.vaelii/vaelii "0.28.0"]
    ;; the sink's own deps — declared here, not leaned on through core, so a change
    ;; in core's deps cannot break this adapter's load.  Carries the xerial SQLite
    ;; JDBC driver only — no postgresql — so a pure-sqlite run stays minimal.
@@ -68,7 +68,7 @@
   :shell {:env {"CLASSPATH" nil}}
 
   :aliases
-  ;; Static-analysis gates, mirroring vaelii core's. `lein lint` runs kondo +
+  ;; Static-analysis checks, mirroring vaelii core's. `lein lint` runs kondo +
   ;; cljfmt + shellcheck + reflect through scripts/lint.sh, which prints one ✓/✗
   ;; line per check and runs ALL of them (not fail-fast), so a red run surfaces
   ;; every problem in one pass (VERBOSE=1 dumps detail). The granular lint-*

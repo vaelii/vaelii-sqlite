@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.28.0 — 2026-10-21 — "the store builds its handle sets through core's `vaelii.impl.handle-set`"
+
+Requires core 0.28.0, whose `vaelii.impl.handle-set` namespace the store reads. A
+database written under core 0.22.0 or later opens unchanged. **1 entry** — 1 Internal.
+
+### Internal
+
+- **The store builds its handle sets through `vaelii.impl.handle-set`.** The store
+  needs a core that carries that namespace.
+  *Migration:* none.
+
 ## 0.22.0 — 2026-09-29 — "a rule row written under core 0.21.0 reads back with the engines and effect core 0.22.0 names"
 
 Requires core 0.22.0, whose rule record holds `:engines` and `:effect` in place of

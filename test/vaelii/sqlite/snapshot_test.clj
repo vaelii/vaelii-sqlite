@@ -3,7 +3,7 @@
 (ns vaelii.sqlite.snapshot-test
   "The SQLite snapshot sink, exercised against a real single-file database.
 
-  Unlike the Postgres sibling there is **no server to gate on**: SQLite is an
+  Unlike the Postgres sibling there is **no server to wait for**: SQLite is an
   embedded driver over a file, so every test stands up a fresh temp-file database,
   runs, and deletes it.  `lein test` always runs the whole suite."
   (:require [clojure.test :refer [deftest is]]
@@ -75,15 +75,15 @@
             _      (do (v/assert src-kb '(likes Muffet Tom) 'CxTest)
                        (v/assert src-kb '(likes Tom Jerry) 'CxTest)
                        (v/assert src-kb '(genls Cat Animal) 'CxTest))
-            stamp  "records-fingerprint-A"
+            fprint "records-fingerprint-A"
             ;; write the source KB's index projection to SQLite
             _      (with-open [sink (sqlite/sqlite-sink ds image)]
-                     (snap/save-index! sink (:index src-kb) stamp))
+                     (snap/save-index! sink (:index src-kb) fprint))
             ;; load it into a fresh, emptied index
             dst-kb (v/open-kb {:backend :memory})
             _      (p/clear-index! (:index dst-kb))
-            result (snap/load-index! (sqlite/sqlite-source ds image) (:index dst-kb) stamp)]
-        (is (= :replayed (:index result)) "a matching stamp replays the image")
+            result (snap/load-index! (sqlite/sqlite-source ds image) (:index dst-kb) fprint)]
+        (is (= :replayed (:index result)) "a matching records fingerprint replays the image")
         (is (pos? (long (:entries result))) "and installs its entries")
         (is (= (index-entry-set (:index src-kb))
                (index-entry-set (:index dst-kb)))
@@ -95,10 +95,10 @@
       (let [kb (v/open-kb {:backend :memory})]
         (v/assert kb '(likes Muffet Tom) 'CxTest)
         (with-open [sink (sqlite/sqlite-sink ds image)]
-          (snap/save-index! sink (:index kb) "stamp-A"))
-        (let [result (snap/load-index! (sqlite/sqlite-source ds image) (:index kb) "stamp-B")]
+          (snap/save-index! sink (:index kb) "fingerprint-A"))
+        (let [result (snap/load-index! (sqlite/sqlite-source ds image) (:index kb) "fingerprint-B")]
           (is (= {:index :rebuild :reason :records-differ} result)
-              "an image whose records stamp disagrees is discarded, the caller rebuilds"))))))
+              "an image whose records fingerprint disagrees is discarded, the caller rebuilds"))))))
 
 (deftest an-uncommitted-write-leaves-no-image
   ;; the single-transaction rule: a sink closed without commit! rolls the whole
@@ -125,7 +125,7 @@
           "no tables reads as no manifest")
       (let [kb (v/open-kb {:backend :memory})]
         (is (= {:index :rebuild :reason :absent}
-               (snap/load-index! (sqlite/sqlite-source ds "never-written") (:index kb) "stamp"))
+               (snap/load-index! (sqlite/sqlite-source ds "never-written") (:index kb) "fingerprint"))
             "so a first-run load-index! rebuilds rather than throwing"))
       (is (do (sqlite/drop-image! ds "never-written") true)
           "and drop-image! is quiet")

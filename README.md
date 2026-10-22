@@ -113,7 +113,7 @@ lein lint        # kondo + cljfmt + shellcheck + the reflection ratchet
 ```
 
 Every test stands up a fresh temp-file database, runs, and deletes it. There is
-nothing to gate on and no `VAELII_*` variable to set — that is the difference
+nothing to wait for and no `VAELII_*` variable to set — that is the difference
 from the Postgres sibling.
 
 ## License

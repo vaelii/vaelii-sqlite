@@ -6,13 +6,12 @@
 # unnoticed.  This is the grep.
 #
 # WHAT IT COVERS.  `lein check` compiles the namespaces on the source path, so
-# this pass is **`src`** — the adapter's one namespace (vaelii.postgres.snapshot),
-# which requires the engine's snapshot protocol (vaelii.impl.io.snapshot).  Compiling
-# it loads core SOURCE through the checkouts/vaelii symlink
+# this pass is **`src`** — the adapter's two namespaces (vaelii.sqlite.snapshot and
+# vaelii.sqlite.record-store), which require the engine's protocols.  Compiling
+# them loads core SOURCE through the checkouts/vaelii symlink
 # (scripts/link-checkouts.sh) under the same flag, so a reflection leak in the
 # code paths the adapter touches surfaces here too.  The test tree is not compiled
-# here (that would need a live-server gate to mean anything); `lein test` compiles
-# it under the same flag when a server is configured.
+# here; `lein test` compiles it under the same flag.
 #
 #   scripts/check-reflection.sh                  # compile src, fail on any warning
 #   REFLECTION_LOG=path/to.log scripts/…         # lint a captured log, compiling nothing
