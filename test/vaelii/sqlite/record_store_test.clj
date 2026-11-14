@@ -219,6 +219,55 @@
             (is (= :monotonic (p/premise-strength store a)))
             (is (= {:by "ann"} (p/get-provenance store a)))))))))
 
+(deftest a-batch-delete-lands-what-the-one-row-entry-point-lands
+  ;; `delete-sentex-batch` / `delete-justification-batch` are one transaction a chunk where
+  ;; `delete-sentex!` / `delete-justification!` are a transaction apiece; the record, its
+  ;; provenance, its premise mark and both caches end where the per-handle ops leave them.
+  (with-temp-db
+    (fn [ds]
+      (with-open [store (rec/sqlite-record-store ds)]
+        (let [a (p/put-sentex store (sx '(p A) :monotonic))
+              b (p/put-sentex store (sx '(p B) :default))
+              c (p/put-sentex store (sx '(p C) :default))
+              j (p/put-justification store {:informant :fwd :antecedents [c]})]
+          (p/mark-premise store a :monotonic)
+          (p/put-provenance store a {:by "ann"})
+          (p/get-sentex store a)                ; cached before the delete
+          (p/delete-sentex-batch store [a b a j :informant 99999])
+          (testing "the sentexes go, with their premise mark and provenance"
+            (is (= #{c} (set (p/sentex-ids store))))
+            (is (empty? (p/premise-ids store)))
+            (is (= :default (p/premise-strength store a)))
+            (is (nil? (p/get-provenance store a))))
+          (testing "the cache no longer answers for a deleted handle"
+            (is (nil? (p/get-sentex store a))))
+          (testing "a justification handle in a sentex batch leaves the justification"
+            (is (= #{j} (set (p/justification-ids store)))))
+          (p/get-justification store j)
+          (p/delete-justification-batch store [j c])
+          (testing "the justification batch deletes justifications only"
+            (is (empty? (p/justification-ids store)))
+            (is (nil? (p/get-justification store j)))
+            (is (= #{c} (set (p/sentex-ids store)))))
+          (testing "an empty batch is a no-op rather than a malformed statement"
+            (p/delete-sentex-batch store [])
+            (p/delete-justification-batch store [])
+            (is (= #{c} (set (p/sentex-ids store))))))))))
+
+(deftest a-batch-delete-spans-more-rows-than-one-chunk
+  (with-temp-db
+    (fn [ds]
+      (let [keep (with-open [store (rec/sqlite-record-store ds)]
+                   (let [ids  (into [] (for [i (range 2500)] (p/put-sentex store (sx (list 'p i) nil))))
+                         keep (set (take-last 10 ids))]
+                     (cap/delete-sentexes store (remove keep ids))
+                     (is (= keep (set (p/sentex-ids store)))
+                         "every chunk's records go, the last chunk's tail included")
+                     keep))]
+        (with-open [store (rec/sqlite-record-store ds)]
+          (is (= keep (set (p/sentex-ids store)))
+              "the deletes were committed, so a reopened store holds the same records"))))))
+
 (deftest a-handle-is-never-reissued-across-a-reopen
   ;; the never-reissue guarantee: allocate the max handle, delete it, reopen — the
   ;; counter must not fall back and hand that handle out again.

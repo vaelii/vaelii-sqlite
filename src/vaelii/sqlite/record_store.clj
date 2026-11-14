@@ -427,16 +427,19 @@
       (close [_] (flush!) nil))))
 
 (defn- annotate-batch!
-  "Run `sql` once per row of `rows` inside **one transaction**, with one `execute-batch!`.
-  A statement here is a transaction of its own, so the transaction is what a bulk annotate
+  "Run each `sql` once per row of its `rows` inside **one transaction**, with one
+  `execute-batch!` a statement; `sql-rows` alternates `sql` and `rows`. A statement here
+  is a transaction of its own, so the transaction is what a bulk annotate or delete
   buys — the same shape `batch-sink` gives a bulk load."
-  [store sql rows]
-  (when (seq rows)
-    (let [^Connection conn    (:conn store)
-          ^ReentrantLock lock (:lock store)]
-      (locked lock
-              (jdbc/with-transaction [tx conn]
-                (jdbc/execute-batch! tx sql (vec rows) {})))))
+  [store & sql-rows]
+  (let [stmts (filter (comp seq second) (partition 2 sql-rows))]
+    (when (seq stmts)
+      (let [^Connection conn    (:conn store)
+            ^ReentrantLock lock (:lock store)]
+        (locked lock
+                (jdbc/with-transaction [tx conn]
+                  (doseq [[sql rows] stmts]
+                    (jdbc/execute-batch! tx sql (vec rows) {})))))))
   nil)
 
 (extend-protocol p/BulkAnnotating
@@ -459,6 +462,33 @@
                       ON CONFLICT(id) DO UPDATE SET prov=excluded.prov"
                      (into [] (map (fn [[id prov]] [id (nippy/freeze prov)])) entries))
     nil))
+
+(def ^:private delete-chunk
+  "Handles per transaction in a bulk delete. The store's lock is released between chunks,
+  so a reader beside a record surgery waits for one chunk, not for the whole surgery."
+  1000)
+
+(defn- delete-batch!
+  "Delete the `kind` records in `ids` with their provenance, `delete-chunk` handles a
+  transaction, as `delete-sentex!` / `delete-justification!` delete one; each handle is
+  then evicted from `cache`. A handle `id-ok?` refuses is skipped."
+  [store kind ^Map cache ids]
+  (doseq [chunk (partition-all delete-chunk (into [] (comp (filter id-ok?) (map ckey)) ids))]
+    (locked (:lock store)
+            (annotate-batch! store
+                             "DELETE FROM record WHERE id=? AND kind=?"
+                             (mapv (fn [id] [id kind]) chunk)
+                             "DELETE FROM record_provenance WHERE id=?"
+                             (mapv vector chunk))
+            (doseq [id chunk] (.remove cache id))))
+  nil)
+
+(extend-protocol p/BulkDeleting
+  SqliteRecordStore
+  (delete-sentex-batch [store ids]
+    (delete-batch! store kind-sentex (:sx-cache store) ids))
+  (delete-justification-batch [store ids]
+    (delete-batch! store kind-justification (:j-cache store) ids)))
 
 (extend-protocol p/BulkLoading
   SqliteRecordStore

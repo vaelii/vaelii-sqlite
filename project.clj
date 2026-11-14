@@ -4,7 +4,7 @@
   (Integer/parseInt
    (second (re-find #"^(?:1\.)?(\d+)" (System/getProperty "java.specification.version")))))
 
-(defproject com.vaelii/sqlite "0.28.0"
+(defproject com.vaelii/sqlite "0.33.0"
   :description "SQLite targets for vaelii's storage protocols. The first is the
                 snapshot sink (vaelii.sqlite.snapshot): a SnapshotSink /
                 SnapshotSource over a single SQLite file, so a KB image — the index
@@ -43,9 +43,9 @@
    ;; the engine.  checkouts/vaelii -> ../vaelii shadows this with the dev-core
    ;; SOURCE, so a dev run reads whatever that tree is; the coordinate below is what a
    ;; CONSUMER of this adapter resolves, and it is a floor rather than a convenience.
-   ;; The record store tallies its fetches through `vaelii.impl.profile/record-fetch`,
-   ;; which lands in 0.11.0 — so that is the floor, above the 0.9.0 the sink alone needs.
-   [com.vaelii/vaelii "0.28.0"]
+   ;; The record store implements core's BulkDeleting protocol, which 0.33.0 carries,
+   ;; so 0.33.0 is the floor.
+   [com.vaelii/vaelii "0.33.0"]
    ;; the sink's own deps — declared here, not leaned on through core, so a change
    ;; in core's deps cannot break this adapter's load.  Carries the xerial SQLite
    ;; JDBC driver only — no postgresql — so a pure-sqlite run stays minimal.

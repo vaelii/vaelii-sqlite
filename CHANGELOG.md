@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.33.0 — 2026-11-10 — "a record surgery deletes its records one transaction per 1,000 handles, through core's `BulkDeleting`"
+
+Requires core 0.33.0, whose optional `vaelii.impl.protocols/BulkDeleting` protocol the
+store implements. A database written under core 0.22.0 or later opens unchanged.
+**1 entry** — 1 Fix.
+
+### Fix: performance
+
+- **A record surgery deletes its records one transaction per 1,000 handles, not one per
+  record.** The store implements core's optional `vaelii.impl.protocols/BulkDeleting`:
+  `delete-sentex-batch` and `delete-justification-batch` run the two `DELETE`s
+  `delete-sentex!` runs, one `execute-batch!` each, inside one transaction a chunk, and
+  leave the end state the per-handle deletes leave. On 20,000 sentexes the batch deletes
+  at 2.4–6.2 µs a record against 33–49 µs per handle. *Migration:* none.
+
 ## 0.28.0 — 2026-10-21 — "the store builds its handle sets through core's `vaelii.impl.handle-set`"
 
 Requires core 0.28.0, whose `vaelii.impl.handle-set` namespace the store reads. A
